@@ -29,22 +29,7 @@ local map = vararg.map
 -- auxiliary functions----------------------------------------------------------
 
 local values = {}
-local maxstack
-for i = 1, huge do
-	if not pcall(unpack, values, 1, 2^i) then
-		local min, max = 2^(i-1), 2^i
-		while min < max do
-			local mid = ceil((min+max)/2)
-			if pcall(unpack, values, 1, mid) then
-				min = mid
-			else
-				max = mid-1
-			end
-		end
-		maxstack = max
-		break
-	end
-end
+local maxstack = 1024
 for i = 1, maxstack, 2 do
 	values[i] = i
 end
@@ -155,21 +140,21 @@ assertsame({"1","nil","nil"    }, 1, 3, map(tostring, 1,nil,nil))
 -- test function errors and expectional conditions ---------------------------
 
 if not pcall(dump, insert) then -- C implementation
-	asserterror("bad argument #1 to '?' (index out of bounds)", range, 0, 0, ...)
+	asserterror("(index out of bounds)", range, 0, 0, ...)
 	
-	asserterror("bad argument #2 to '?' (number expected, got no value)", insert)
-	asserterror("bad argument #2 to '?' (number expected, got no value)", insert, nil)
-	asserterror("bad argument #2 to '?' (number expected, got nil)", insert, nil, nil)
-	asserterror("bad argument #2 to '?' (index out of bounds)", insert, nil, 0)
+	asserterror("(number expected, got no value)", insert)
+	asserterror("(number expected, got no value)", insert, nil)
+	asserterror("(number expected, got nil)", insert, nil, nil)
+	asserterror("(index out of bounds)", insert, nil, 0)
 	
-	asserterror("bad argument #2 to '?' (number expected, got no value)", replace)
-	asserterror("bad argument #2 to '?' (number expected, got no value)", replace, nil)
-	asserterror("bad argument #2 to '?' (number expected, got nil)", replace, nil, nil)
-	asserterror("bad argument #2 to '?' (index out of bounds)", replace, nil, 0)
+	asserterror("(number expected, got no value)", replace)
+	asserterror("(number expected, got no value)", replace, nil)
+	asserterror("(number expected, got nil)", replace, nil, nil)
+	asserterror("(index out of bounds)", replace, nil, 0)
 	
-	asserterror("bad argument #1 to '?' (number expected, got no value)", remove)
-	asserterror("bad argument #1 to '?' (number expected, got nil)", remove, nil)
-	asserterror("bad argument #1 to '?' (index out of bounds)", remove, 0)
+	asserterror("(number expected, got no value)", remove)
+	asserterror("(number expected, got nil)", remove, nil)
+	asserterror("(index out of bounds)", remove, 0)
 	
 	assertsame({}, 1, 0, append())
 	assertsame({nil}, 1, 1, append(nil))
@@ -177,7 +162,7 @@ if not pcall(dump, insert) then -- C implementation
 	assertsame({}, 1, 0, concat())
 	asserterror("attempt to call a nil value", concat, nil)
 	
-	asserterror("bad argument #1 to '?' (value expected)", map)
+	asserterror("(value expected)", map)
 	assertsame({}, 1, 0, map(nil))
 	asserterror("attempt to call a nil value", map, nil, nil)
 end

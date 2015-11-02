@@ -1,7 +1,7 @@
 Version 1.1.1:
 - Performance improvement in 'vararg.pack'.
 - Removal of limitation of max 255 values to pack using 'vararg.pack'.
-- Lua 5.2 compatibility.
+- Lua 5.3 compatibility.
 
 Version 1.1:
 - New operation 'vararg.map'.

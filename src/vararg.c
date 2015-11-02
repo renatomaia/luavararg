@@ -28,10 +28,11 @@ concat(f1,f2,...)  --> return all the values returned by functions 'f1,f2,...'
 
 
 static int _optindex(lua_State *L, int arg, int top, int def) {
-	int idx = (def ? luaL_optint(L, arg, def) : luaL_checkint(L, arg));
+	lua_Integer idx = (def ? luaL_optinteger(L, arg, def)
+	                       : luaL_checkinteger(L, arg));
 	idx = (idx>=0 ? idx : top+idx+1);  /* convert a stack index to positive */
 	if (idx<=0) luaL_argerror(L, arg, "index out of bounds");
-	return idx;
+	return (int)idx;
 }
 
 static int luaVA_tuple(lua_State *L) {
