@@ -1,0 +1,9 @@
+Version 1.1.1:
+- Performance improvement in 'vararg.pack'.
+- Removal of limitation of max 255 values to pack using 'vararg.pack'.
+
+Version 1.1:
+- New operation 'vararg.map'.
+
+Version 1.0:
+- First release.
