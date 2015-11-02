@@ -23,8 +23,6 @@ map(f, ...)        --> t={} n=select("#",...) for i=1,n do t[i]=f((select(i,...)
 concat(f1,f2,...)  --> return all the values returned by functions 'f1,f2,...'
 */
 
-#define LUA_VALIBNAME	"vararg"
-
 #include "lua.h"
 #include "lauxlib.h"
 
@@ -174,7 +172,7 @@ static int luaVA_concat(lua_State *L) {
 	return lua_gettop(L)-top;
 }
 
-static const luaL_Reg va_funcs[] = {
+static const luaL_Reg valib[] = {
 	{"pack", luaVA_pack},
 	{"range", luaVA_range},
 	{"insert", luaVA_insert},
@@ -187,6 +185,6 @@ static const luaL_Reg va_funcs[] = {
 };
 
 LUALIB_API int luaopen_vararg(lua_State *L) {
-	luaL_register(L, LUA_VALIBNAME, va_funcs);
+	luaL_newlib(L, valib);
 	return 1;
 }
