@@ -1,48 +1,31 @@
 /*
-'vararg' is a Lua library for manipulation of variable arguments (vararg) of
-functions. These functions basically allow you to do things with vararg that
-cannot be efficiently done in pure Lua but can be easily done through the C API.
-
-Actually, the main motivation for this library was the 'pack' function, which
-is an elegant alternative for the possible new standard function 'table.pack'
-and the praised 'apairs'. Also 'pack' allows an interesting implementaiton of
-tuples in pure Lua.
-
-p = pack(...)
-  p()              --> ...
-  p("#")           --> select("#", ...)
-  p(i)             --> (select(i, ...))
-  p(i, j)          --> unpack({...}, i, j)
-  for i,v in p do  --> for i,v in apairs(...) do
-range(i, j, ...)   --> unpack({...}, i, j)
-remove(i, ...)     --> t={...} table.remove(t,i) return unpack(t,1,select("#",...)-1)
-insert(v, i, ...)  --> t={...} table.insert(t,i,v) return unpack(t,1,select("#",...)+1)
-replace(v, i, ...) --> t={...} t[i]=v return unpack(t,1,select("#",...))
-append(v, ...)     --> c=select("#",...)+1 return unpack({[c]=val,...},1,c)
-map(f, ...)        --> t={} n=select("#",...) for i=1,n do t[i]=f((select(i,...))) end return unpack(t,1,n)
-concat(f1,f2,...)  --> return all the values returned by functions 'f1,f2,...'
+** $Id$
+** Library for Vararg Manipulation
+** See Copyright Notice in LICENSE
 */
 
 #include "lua.h"
 #include "lauxlib.h"
 
 
-static int _optindex(lua_State *L, int arg, int top, int def) {
-	lua_Integer idx = (def ? luaL_optinteger(L, arg, def)
-	                       : luaL_checkinteger(L, arg));
-	idx = (idx>=0 ? idx : top+idx+1);  /* convert a stack index to positive */
-	if (idx<=0) luaL_argerror(L, arg, "index out of bounds");
-	return (int)idx;
+static int luaVA_len(lua_State *L) {
+	lua_pushinteger(L, lua_gettop(L));
+	return 1;
+}
+
+static lua_Integer posrelat (lua_Integer pos, int len) {
+  if (pos >= 0) return pos;
+  else return (lua_Integer)len + pos + 1;
 }
 
 static int luaVA_tuple(lua_State *L) {
-	int n = lua_tointeger(L, lua_upvalueindex(1));  /* number of packed values */
+	int n = (int)lua_tointeger(L, lua_upvalueindex(1));  /* number of packed values */
 	int type = lua_type(L, 1);
 	if (type == LUA_TNIL) {
-		int i = lua_tointeger(L, 2);
+		lua_Integer i = lua_tointeger(L, 2);
 		if (++i>0 && i<=n) {
 			lua_pushinteger(L, i);
-			if (n<255) lua_pushvalue(L, lua_upvalueindex(2+(n-2+i)%n));
+			if (n<255) lua_pushvalue(L, lua_upvalueindex(2+(n-2+(int)i)%n));
 			        else lua_rawgeti(L, lua_upvalueindex(2), i);
 			return 2;
 		}
@@ -50,20 +33,22 @@ static int luaVA_tuple(lua_State *L) {
 		lua_pushinteger(L, n);
 		return 1;
 	} else {
-		int i=1, e=n, r=n;
+		lua_Integer i = 1, e = n;
+		int r = n;
 		if (lua_gettop(L) > 0) {
-			i = _optindex(L, 1, n, 0);
-			e = _optindex(L, 2, n, i);
-			r = e-i+1;
+			i = posrelat(luaL_checkinteger(L, 1), n);
+			e = posrelat(luaL_optinteger(L, 2, i), n);
+			if (i < 1) i = 1;
+			if (e > n) e = n;
+			if (i > e) return 0;
+			r = (int)(e - i + 1);
 			lua_settop(L, 0);
-			luaL_checkstack(L, r, "too many results to unpack");
-			if(e>n) e=n;
 		}
-		for(; i<=e; ++i) {
-			if (n<255) lua_pushvalue(L, lua_upvalueindex(2+(n-2+i)%n));
+		luaL_checkstack(L, r, "too many results");
+		for(; i <= e; ++i) {
+			if (n<255) lua_pushvalue(L, lua_upvalueindex(2+(n-2+(int)i)%n));
 			        else lua_rawgeti(L, lua_upvalueindex(2), i);
 		}
-		lua_settop(L, r);
 		return r;
 	}
 	return 0;
@@ -91,97 +76,101 @@ static int luaVA_pack(lua_State *L) {
 }
 
 static int luaVA_range(lua_State *L) {
-	int n, i, e;
-	n = lua_gettop(L);
-	i = _optindex(L, 1, n-2, 0)+2;
-	e = _optindex(L, 2, n-2, 0)+2;
-	if (i>e) return 0;  /* empty range */
-	if (!lua_checkstack(L, e-n))  /* space for extra nil's */
-		luaL_error(L, "range is too big");
-	lua_settop(L, e);
-	return e-i+1;
-}
-
-static int luaVA_insert(lua_State *L) {
-	int i, n;
-	n = lua_gettop(L);
-	i = _optindex(L, 2, n-2, 0)+2;
-	if (i>n) {
-		if (!lua_checkstack(L, i-n))  /* space for extra nil's */
-			luaL_error(L, "index is too big");
-		lua_settop(L, i-1);
-		lua_pushvalue(L, 1);
-		return i-2;
-	}
-	lua_pushvalue(L, 1);
-	lua_insert(L, i);
-	return n-1;
+	int n = lua_gettop(L)-2;
+	lua_Integer i = posrelat(luaL_checkinteger(L, 1), n);
+	lua_Integer e = posrelat(luaL_checkinteger(L, 2), n);
+	if (i < 1) i = 1;
+	if (e > n) e = n;
+	if (i > e) return 0;
+	lua_settop(L, 2+(int)e);
+	return (int)(e - i + 1);
 }
 
 static int luaVA_remove(lua_State *L) {
-	int i, n;
-	n = lua_gettop(L);
-	i = _optindex(L, 1, n-1, 0)+1;
-	if (i<=n) {
-		lua_remove(L, i);
+	int n = lua_gettop(L)-1;
+	lua_Integer i = posrelat(luaL_checkinteger(L, 1), n);
+	if (i > 0 && i <= n) {
+		lua_remove(L, 1+(int)i);
 		--n;
 	}
-	return n-1;
+	return n;
 }
 
 static int luaVA_replace(lua_State *L) {
-	int i, n;
-	n = lua_gettop(L);
-	i = _optindex(L, 2, n-2, 0)+2;
+	int n = lua_gettop(L)-2;
+	lua_Integer i = posrelat(luaL_checkinteger(L, 2), n);
 	if (i > n) {
-		if (!lua_checkstack(L, i-n))  /* space for extra nil's */
-			luaL_error(L, "index is too big");
-		lua_settop(L, i-1);
+		if (2+i >= INT_MAX || !lua_checkstack(L, (int)i-n))
+			return luaL_error(L, "too many results");
+		lua_settop(L, (int)i+1);
 		lua_pushvalue(L, 1);
-		return i-2;
+		return (int)i;
 	}
+	luaL_argcheck(L, i > 0, 2, "position out of bounds");
 	lua_pushvalue(L, 1);
-	lua_replace(L, i);
-	return n-2;
+	lua_replace(L, 2+(int)i);
+	return n;
+}
+
+static int luaVA_insert(lua_State *L) {
+	int n = lua_gettop(L)-2;
+	lua_Integer i = posrelat(luaL_checkinteger(L, 2), n);
+	if (i > n) {
+		if (2+i >= INT_MAX || !lua_checkstack(L, (int)i-n))
+			return luaL_error(L, "too many results");
+		lua_settop(L, (int)i+1);
+		lua_pushvalue(L, 1);
+		return (int)i;
+	}
+	luaL_argcheck(L, i > 0, 2, "position out of bounds");
+	lua_pushvalue(L, 1);
+	lua_insert(L, 2+(int)i);
+	return n+1;
 }
 
 static int luaVA_append(lua_State *L) {
+	int n = lua_gettop(L);
+	luaL_checkany(L, 1);
 	lua_pushvalue(L, 1);
-	return lua_gettop(L)-1;
+	return n;
 }
 
 static int luaVA_map(lua_State *L) {
 	int top = lua_gettop(L);
-	int i;
 	luaL_checkany(L, 1);
-	for(i=2; i<=top; ++i) {
+	if (top > 1) {
+		int i;
+		for(i=2; i<top; ++i) {
+			lua_pushvalue(L, 1);
+			lua_pushvalue(L, i);
+			lua_call(L, 1, 1);
+			lua_replace(L, i); /* to avoid the stack to double in size */
+		}
 		lua_pushvalue(L, 1);
-		lua_pushvalue(L, i);
-		lua_call(L, 1, 1);
-		lua_replace(L, i); /* to avoid the stack to double in size */
+		lua_insert(L, top);
+		lua_call(L, 1, LUA_MULTRET);
+		return lua_gettop(L)-1;
 	}
-	return top-1;
+	return 0;
 }
 
 static int luaVA_concat(lua_State *L) {
-	int top = lua_gettop(L);
-	int i;
-	for(i=1; i<=top; ++i) {
-		lua_pushvalue(L, i);
-		lua_call(L, 0, LUA_MULTRET);
-	}
-	return lua_gettop(L)-top;
+	luaL_checkany(L, 1);
+	lua_pushvalue(L, 1);
+	lua_call(L, 0, LUA_MULTRET);
+	return lua_gettop(L)-1;
 }
 
 static const luaL_Reg valib[] = {
+	{"append", luaVA_append},
+	{"concat", luaVA_concat},
+	{"insert", luaVA_insert},
+	{"len", luaVA_len},
+	{"map", luaVA_map},
 	{"pack", luaVA_pack},
 	{"range", luaVA_range},
-	{"insert", luaVA_insert},
 	{"remove", luaVA_remove},
 	{"replace", luaVA_replace},
-	{"append", luaVA_append},
-	{"map", luaVA_map},
-	{"concat", luaVA_concat},
 	{NULL, NULL}
 };
 
