@@ -51,7 +51,7 @@ Returns a function that is a closure which captures all the values from the vara
 The returned function can be called in three different ways to inspect the captured values:
 
 #### `f ([i [, j]])`
-Returns the values from the vararg `...` from position `i` until `j`, similar to the function [`vararg.range`](#varargrange-i-j); `i` and `j` can be negative.
+Returns the captured values from position `i` until `j`, such as call [`vararg.range(i, j, ...)`](#varargrange-i-j) when `...` are the captured values.
 If `i` and `j` are absent, they are assumed to be 1 and -1, respectively, thus all the captured values from the vararg are returned.
 If only `j` is absent, then it is assumed to be equal to `i` (which indicates only the value at position shall be returned).
 
@@ -60,7 +60,7 @@ Returns the number of values captured.
 
 #### `f (nil [, i])`
 Returns the position and the value next to position `i`.
-If `i` indicates the last value in the captured vararg, then no values are returned.
+If `i` indicates the last value captured, then no values are returned.
 If `i` is absent, it is assumed to be 0.
 This usage pattern allow that the construction
 
@@ -70,7 +70,7 @@ for i, v in vararg.pack(...) do
 end
 ```
 
-iterates over the captured values from the vararg, where `i` is the position of the value, and `v` contains the captured value.
+iterates over the captured values, where `i` is the position of the value, and `v` contains the captured value.
 
 ### `vararg.range (i, j, ...)`
 
