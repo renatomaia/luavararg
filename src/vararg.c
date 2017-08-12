@@ -135,30 +135,42 @@ static int luaVA_append(lua_State *L) {
 	return n;
 }
 
+static int luaVA_gettopk(lua_State *L, int status, lua_KContext ctx) {
+	(void)status;
+	(void)ctx;
+	return lua_gettop(L)-1;
+}
+
+static int luaVA_mapk(lua_State *L, int status, lua_KContext k) {
+	int top, i = (int)k;
+	(void)status;
+	if (i>1) lua_replace(L, i); /* if continuation, remove result of last call */
+	++i;                        /* continue processing next map */
+	top = lua_gettop(L);
+	for(; i<top; ++i) {
+		lua_pushvalue(L, 1);
+		lua_pushvalue(L, i);
+		lua_callk(L, 1, 1, i, luaVA_mapk);
+		lua_replace(L, i); /* to avoid the stack to double in size */
+	}
+	lua_pushvalue(L, 1);
+	lua_insert(L, top);
+	lua_callk(L, 1, LUA_MULTRET, 0, luaVA_gettopk);
+	return luaVA_gettopk(L, LUA_OK, 0);
+}
+
 static int luaVA_map(lua_State *L) {
 	int top = lua_gettop(L);
 	luaL_checkany(L, 1);
-	if (top > 1) {
-		int i;
-		for(i=2; i<top; ++i) {
-			lua_pushvalue(L, 1);
-			lua_pushvalue(L, i);
-			lua_call(L, 1, 1);
-			lua_replace(L, i); /* to avoid the stack to double in size */
-		}
-		lua_pushvalue(L, 1);
-		lua_insert(L, top);
-		lua_call(L, 1, LUA_MULTRET);
-		return lua_gettop(L)-1;
-	}
+	if (top > 1) return luaVA_mapk(L, LUA_OK, 1);
 	return 0;
 }
 
 static int luaVA_concat(lua_State *L) {
 	luaL_checkany(L, 1);
 	lua_pushvalue(L, 1);
-	lua_call(L, 0, LUA_MULTRET);
-	return lua_gettop(L)-1;
+	lua_callk(L, 0, LUA_MULTRET, 0, luaVA_gettopk);
+	return luaVA_gettopk(L, LUA_OK, 0);
 }
 
 static const luaL_Reg valib[] = {

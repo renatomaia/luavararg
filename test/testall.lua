@@ -165,7 +165,27 @@ assertsame({1,2,3,4,5,6,7,8,9}, 1, 9, concat(pack(7,8,9),
                                       concat(pack(4,5,6),
                                       concat(pack(1,2,3)))))
 
--- test function errors and exceptional conditions ---------------------------
+-- test function calls that yield ----------------------------------------------
+
+local c = coroutine.create(function (...)
+	return map(coroutine.yield, ...)
+end)
+local function resumetoend(c, ok, ...)
+	assert(ok, ...)
+	if coroutine.status(c) == "suspended" then
+		return resumetoend(c, coroutine.resume(c, 9*(...)))
+	end
+	return ...
+end
+assertsame({9,18,27}, 1, 3, resumetoend(c, coroutine.resume(c, 1,2,3)))
+
+local c = coroutine.create(function (...)
+	return concat(coroutine.yield, ...)
+end)
+assert(coroutine.resume(c, 1,2,3))
+assertsame({true, 1,2,3,4,5,6}, 1, 7, coroutine.resume(c, 4,5,6))
+
+-- test function errors and exceptional conditions -----------------------------
 
 asserterror("(number expected, got no value)", insert)
 asserterror("(number expected, got no value)", insert, nil)
@@ -195,6 +215,6 @@ asserterror("attempt to call a nil value", concat, nil, 1,2,3)
 asserterror("(value expected)", map)
 asserterror("attempt to call a nil value", map, nil, 1,2,3)
 
-------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 print("Success!")

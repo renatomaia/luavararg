@@ -14,6 +14,9 @@ Documentation
 History
 -------
 
+### Version 2.0.1
+- `vararg.concat` and `vararg.map` now work with functions that yield.
+
 ### Version 2.0
 -   Lua 5.3 compatibility.
 -   Performance improvement in 'vararg.pack'.
