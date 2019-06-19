@@ -14,7 +14,7 @@ Documentation
 History
 -------
 
-### Version 2.0.1
+### Version 2.1
 - `vararg.concat` and `vararg.map` now work with functions that yield.
 
 ### Version 2.0
