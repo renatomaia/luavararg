@@ -1,21 +1,25 @@
 # == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT =======================
 
-LUA_HOME= /usr/local
-LUA_INC= $(LUA_HOME)/include
-LUA_LIB= $(LUA_HOME)/lib
-LUA_BIN= $(LUA_HOME)/bin
-
 # Your platform. See PLATS for possible values.
-PLAT= none
+PLAT= guess
 
-CC= gcc
-CFLAGS= -O2 -Wall -I$(LUA_INC) $(MYCFLAGS)
-LDFLAGS= -L$(LUA_LIB) $(MYLDFLAGS)
-LIBS= $(MYLIBS)
+LUA_DIR= /usr/local
+LUA_INCDIR= $(LUA_DIR)/include
+
+LD= ld
+CC= gcc -std=gnu89
+CFLAGS= -O2 -Wall -Wextra -I. -I$(LUA_INCDIR) $(SYSCFLAGS) $(MYCFLAGS)
+LDFLAGS= $(SYSLDFLAGS) $(MYLDFLAGS)
+LIBS= $(SYSLIBS) $(MYLIBS)
 
 AR= ar rcu
 RANLIB= ranlib
 RM= rm -f
+UNAME= uname
+
+SYSCFLAGS=
+SYSLDFLAGS=
+SYSLIBS=
 
 MYCFLAGS=
 MYLDFLAGS=
@@ -23,13 +27,11 @@ MYLIBS=
 
 # == END OF USER SETTINGS -- NO NEED TO CHANGE ANYTHING BELOW THIS LINE =======
 
-PLATS= linux solaris macosx
-
-LIBNAME= vararg
+PLATS= guess generic linux macosx solaris
 
 OBJ=	vararg.o
-LIB=	lib$(LIBNAME).a
-SO=	lib$(LIBNAME).so
+LIB=	libluavararg.a
+SO=	vararg.so
 
 default: $(PLAT)
 
@@ -41,13 +43,9 @@ a:	$(LIB)
 
 so:	$(SO)
 
-# Static Libraies
-
 $(LIB): $(OBJ)
 	$(AR) $@ $?
 	$(RANLIB) $@
-
-# Dynamic Libraies
 
 $(SO): $(OBJ)
 	$(LD) $(LDFLAGS) -o $@ $?
@@ -56,33 +54,41 @@ clean:
 	$(RM) $(OBJ) $(LIB) $(SO)
 
 echo:
-	@echo "CC = $(CC)"
-	@echo "CFLAGS = $(CFLAGS)"
-	@echo "AR = $(AR)"
-	@echo "RANLIB = $(RANLIB)"
-	@echo "RM = $(RM)"
-	@echo "MYCFLAGS = $(MYCFLAGS)"
-	@echo "MYLDFLAGS = $(MYLDFLAGS)"
-	@echo "MYLIBS = $(MYLIBS)"
+	@echo "PLAT= $(PLAT)"
+	@echo "CC= $(CC)"
+	@echo "CFLAGS= $(CFLAGS)"
+	@echo "LDFLAGS= $(LDFLAGS)"
+	@echo "LIBS= $(LIBS)"
+	@echo "AR= $(AR)"
+	@echo "RANLIB= $(RANLIB)"
+	@echo "RM= $(RM)"
+	@echo "UNAME= $(UNAME)"
 
 # Convenience targets for usual platforms
 ALL= all
 
-none:
-	@echo "Please do 'make PLATFORM' where PLATFORM is one of these:"
+help:
+	@echo "Do 'make PLATFORM' where PLATFORM is one of these:"
 	@echo "   $(PLATS)"
 
-linux:
-	$(MAKE) $(ALL) LD="gcc" MYCFLAGS="-fpic $(MYCFLAGS)" \
-	               MYLDFLAGS="-Wl,-E -O -shared $(MYLDFLAGS)"
+guess:
+	@echo Guessing `$(UNAME)`
+	@$(MAKE) `$(UNAME)`
 
-solaris:
-	$(MAKE) $(ALL) LD="gcc" MYCFLAGS="-fpic $(MYCFLAGS)" \
-	               MYLDFLAGS="-O -shared $(MYLDFLAGS)"
+generic: $(ALL)
 
-macosx:
-	$(MAKE) $(ALL) MYCFLAGS="-fno-common $(MYCFLAGS)" \
-	               MYLDFLAGS="-bundle -undefined dynamic_lookup $(MYLDFLAGS)" \
+Linux linux:
+	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_LINUX -fPIC" \
+	               SYSLDFLAGS="-shared"
+
+Darwin macos macosx:
+	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX -fno-common" \
+	               SYSLDFLAGS="-bundle -undefined dynamic_lookup" \
+	               CC='export MACOSX_DEPLOYMENT_TARGET="10.10"; gcc' \
 	               LD='export MACOSX_DEPLOYMENT_TARGET="10.10"; gcc'
 
-# (end of Makefile)
+SunOS solaris:
+	$(MAKE) $(ALL) SYSCFLAGS="-fpic" SYSLDFLAGS="-O -shared"
+
+# list targets that do not create files (but not all makes understand .PHONY)
+.PHONY: all $(PLATS) default o a so clean depend echo none
