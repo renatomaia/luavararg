@@ -14,8 +14,8 @@ static int luaVA_len(lua_State *L) {
 }
 
 static lua_Integer posrelat (lua_Integer pos, int len) {
-  if (pos >= 0) return pos;
-  else return (lua_Integer)len + pos + 1;
+	if (pos >= 0) return pos;
+	else return (lua_Integer)len + pos + 1;
 }
 
 static int luaVA_tuple(lua_State *L) {

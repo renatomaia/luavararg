@@ -5,6 +5,15 @@ Vararg Manipulation Library
 These functions basically allow you to do things with vararg that
 cannot be efficiently done in pure Lua but can be easily done through the C API.
 
+Installation
+------------
+
+You can install it from source using [LuaRocks](https://luarocks.org):
+
+```shell
+luarocks make etc/vararg-scm-1.rockspec
+```
+
 Documentation
 -------------
 

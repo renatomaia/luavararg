@@ -1,8 +1,7 @@
 package = "vararg"
 version = "scm-1"
 source = {
-	url = "https://github.com/renatomaia/luavararg/archive/master.zip",
-	dir = "luavararg-master",
+	url = "git://github.com/renatomaia/luavararg",
 }
 description = {
 	summary = "Manipulation of variable arguments",
@@ -15,7 +14,7 @@ description = {
 	license = "MIT"
 }
 dependencies = {
-	"lua >= 5.2, < 5.4"
+	"lua >= 5.2"
 }
 build = {
 	type = "builtin",
